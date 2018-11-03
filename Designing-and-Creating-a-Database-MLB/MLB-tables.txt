@@ -1,0 +1,63 @@
+tables
+
+game:
+game_id TEXT h_name||date||number_of_game
+date TEXT (yyyymmdd)
+day_of_week / SU MO TU WE TH FR SA TEXT
+visiting_team_id TEXT
+visiting_league TEXT
+home_team_id TEXT
+home_league TEXT
+lenght_of_game_in_outs INTEGER
+Day/Night D ó N TEXT
+park_id  TEXT
+time_of_game_in_minutes NUMERIC
+visiting_line_score (000030(11)000) TEXT reliza 3 carreras solo en la 4ta y 11 en la 6ta
+home_line_scores idem TEXT
+adicionales?
+22-38 (v off stats)
+39-43 (v pitch stats)
+44-49 (v def stats)
+50-66 (idem h)
+67-71 (idem h)
+72-77 (idem h)
+90-91     Visiting team manager ID and name
+92-93     Home team manager ID and name
+94-95     Winning pitcher ID and name
+96-97     Losing pitcher ID and name
+98-99     Saving pitcher ID and name-
+100-101   Game Winning RBI batter ID and name--"","(none)" if none awarded
+102-103   Visiting starting pitcher ID and name
+104-105   Home starting pitcher ID and name
+h_player_i_id TEXT
+h_player_i_def_pos TEXT
+v_player_i_id TEXT
+v_player_i_def_pos TEXT
+i:1..9 in order of bat
+
+park:
+park_id
+name
+city
+league
+
+team:
+team_id
+nickname
+league
+start
+end
+city
+
+state:
+state_id
+city
+
+person:
+person_id
+first||" "||last
+player_debut
+coach_debut
+
+
+
