@@ -1,0 +1,150 @@
+---
+title: "Analizing Forest Fire Data"
+Author: Matias L. Conde
+dataset: forestfires.csv
+output: html_notebook
+---
+
+### In this Notebook we are going to try to answer the following questions: 
+-  During which months are forest fires most common? 
+-  On which days of the week are forest fires most common?
+-  One showing the number of forest fires occuring during each month
+-  Another showing the number of forest fires occurring on each day of the week
+
+```{r}
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(purrr)
+```
+#### Reading the dataset:
+```{r}
+forest_fires <- read_csv("/home/matias/Documents/repos/Data-Science-Notebooks/Analyzing Forest Fire Data/forestfires.csv")
+
+View(forest_fires)
+
+forest_fires <- forest_fires %>%
+  mutate(month = factor(month, levels = c("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")), 
+         day = factor(day, levels = c("sun","mon","tue","wed","thu","fri","sat")))
+```
+#### DISTRIBUTION OF NUMBER OF FIRES PER DAY AND PER MONTH:
+```{r}
+fires_per_day <- forest_fires %>%
+  group_by(day) %>%
+  summarize(`Number of Forest-Fire` = n()) # %>%
+
+fires_per_month <- forest_fires %>%
+  group_by(month) %>%
+  summarize(`Number of Forest-Fire` = n()) # %>%
+
+ggplot(data = fires_per_day) + 
+  aes(x = day, y = `Number of Forest-Fire`) + 
+  geom_bar(stat = "identity", colour="gold", fill="gold", alpha=0.3) + 
+  theme(panel.background = element_rect(fill = "white"), plot.title = element_text(hjust = 0.5))	+ 
+  labs(title = "Number of Forest Fire per Day")
+
+ggplot(data = fires_per_month) + 
+  aes(x = month, y = `Number of Forest-Fire`) + 
+  geom_bar(stat = "identity", colour="gold", fill="gold", alpha=0.3) + 
+  theme(panel.background = element_rect(fill = "white"), plot.title = element_text(hjust = 0.5))	+ 
+  labs(title = "Number of Forest Fire per Month")
+
+```
+#### DISTRIBUTION OF ANOTHER VARIABLES PER DAY AND PER MONTH. 
+
+
+ FFMC: Fine Fuel Moisture Code index from the FWI system: 18.7 to 96.20
+ DMC: Duff Moisture Code index from the FWI system: 1.1 to 291.3
+ DC: Drought Code index from the FWI system: 7.9 to 860.6
+ ISI: Initial Spread Index from the FWI system: 0.0 to 56.10
+ temp: Temperature in Celsius degrees: 2.2 to 33.30
+ RH: Relative humidity in percentage: 15.0 to 100
+ wind: Wind speed in km/h: 0.40 to 9.40
+ rain: Outside rain in mm/m2 : 0.0 to 6.4
+ area: The burned area of the forest (in ha): 0.00 to 1090.84 
+
+```{r}
+vars <- c("FFMC","DMC","DC","ISI","temp","RH","wind","rain")
+
+
+create_box_plots_day <- function(x,y) {
+  ggplot(data = forest_fires) + 
+    aes_string(x = x, y = y) + 
+    geom_boxplot(colour="darkorange", fill="papayawhip") + 
+    labs(title = "Variables per Day of the Week") + 
+    theme(panel.background = element_rect(fill = "white"), plot.title = element_text(hjust = 0.5))
+}
+
+create_box_plots_month <- function(x,y) {
+  ggplot(data = forest_fires) + 
+    aes_string(x = x, y = y) + 
+    geom_boxplot(colour="firebrick2", fill="white") + 
+    labs(title = "Variables per Month") + 
+    theme(panel.background = element_rect(fill = "white"), plot.title = element_text(hjust = 0.5))
+}
+
+```
+#### BOX PLOTS PER DAY
+```{r}
+x_var_day = names(forest_fires)[4]
+y_var_day = names(forest_fires)[5:12]
+
+map2(x_var_day, y_var_day, create_box_plots_day)
+```
+#### BOX PLOTS PER MONTH
+```{r}
+x_var_month = names(forest_fires)[3]
+y_var_month = names(forest_fires)[5:12]
+
+map2(x_var_month, y_var_month, create_box_plots_month)
+```
+
+
+####  The area variable contains data on the number of hectares of forest that burned during the forest fire. 
+####  Perhaps we can use this variable as an indicator of the severity of the fire. 
+####  The idea is that worse fires will result in a larger burned area. 
+
+####  Let's create scatter plots to see what can be learned about relationships between 
+####  The area burned by a forest fire and the following variables: 
+
+```{r}
+create_scatter <- function(x,y) {
+  ggplot(data = forest_fires) + 
+    aes_string(x = x, y = y) + 
+    geom_point(alpha = 0.3,  colour="deepskyblue") + 
+    labs(title = "Burned area vs other variables") + 
+    theme(panel.background = element_rect(fill = "white"), plot.title = element_text(hjust = 0.5))
+}
+
+x_var2 = names(forest_fires[5:12])
+y_var2 = names(forest_fires[13])
+
+map2(x_var2, y_var2, create_scatter)
+```
+
+#### The result is that most points are clustered around the bottom of the plots. A histogram of the area variable values clearly illustrates the distribution and why the scatter plots look the way they do: 
+
+```{r}
+ggplot(data = forest_fires) + 
+  aes(x = area) + 
+  geom_histogram()
+```
+#### We can see that a lot of values are arround of the zero. Then we can subset data into three categories: 0 value of area, 10-20 y 20 - 50
+
+```{r}
+area_not_null <- forest_fires %>%
+  filter(area > 1 & area <100)
+
+create_scatter2 <- function(x,y) {
+  ggplot(data = area_not_null) + 
+    aes_string(x = x, y = y) + 
+    geom_point(alpha = 0.3, colour="deepskyblue") + 
+    labs(title = "Burned area vs other variables") + 
+    theme(panel.background = element_rect(fill = "white"), plot.title = element_text(hjust = 0.5))
+}
+
+x_var2 = names(forest_fires[5:12])
+y_var2 = names(forest_fires[13])
+
+map2(x_var2, y_var2, create_scatter2)
+```
