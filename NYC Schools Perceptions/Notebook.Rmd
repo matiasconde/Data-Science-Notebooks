@@ -1,0 +1,258 @@
+---
+title: "NYC Schools Perceptions"
+author: "Matias L. Conde"
+data: combined.csv, masterfile11_gened_final.txt, masterfile11_d75_final.txt
+output: html_notebook
+---
+
+Based on responses to surveys designed to gauge parent, student, and teacher perceptions of the quality of New York City schools, we'll going to investigate the following questions: 
+
+- Do student, teacher, and parent perceptions of NYC school quality appear to be related to demographic and academic success metrics?
+
+- Do students, teachers, and parents have similar perceptions of NYC school quality?
+
+The next two files, masterfile11_gened_final.xlsx and masterfile11_gened_final.txt, contain survey data for "general education" schools — those that do not specifically serve populations with special needs.
+
+The files masterfile11_d75_final.xlsx and masterfile11_d75_final.txt contain survey data for District 75 schools, which provide special education support for children with special needs such as learning or physical disabilities. 
+
+you can download these files from:
+https://data.cityofnewyork.us/Education/2011-NYC-School-Survey/mnz3-dyi8
+
+
+We're going to use the combined data set that have the demographic data: "combined.csv"
+you can download the file from: https://data.world/dataquest/nyc-schools-data/workspace/file?filename=combined.csv
+
+
+#### 1. Load the packages we 'll goint to use:
+```{r}
+library(readr)
+library(dplyr)
+library(stringr)
+library(purrr)
+library(tidyr)
+library(ggplot2)
+```
+#### 2. Read the csv and tsv files: 
+```{r}
+combined <- read_csv("/home/matias/Documents/repos/Data-Science-Notebooks/NYC Schools Perceptions/combined.csv")
+survey <- read_tsv("/home/matias/Documents/repos/Data-Science-Notebooks/NYC Schools Perceptions/2011 data files online/masterfile11_gened_final.txt")
+survey_d75 <- read_tsv("/home/matias/Documents/repos/Data-Science-Notebooks/NYC Schools Perceptions/2011 data files online/masterfile11_d75_final.txt")
+```
+```{r}
+combined
+survey
+survey_d75
+```
+#### Simplifying the survey data frames to include only variables we will need for our analysis:
+```{r}
+combined_up <-combined %>%
+  select(1, 3:7, 13, 15, 19:22, 27:30)
+  
+  
+survey_up <- survey %>%
+  filter((schooltype == "High School") | (schooltype == "Middle / High School")) %>%
+  select(1, 17:32)
+  
+survey_d75_up <- survey_d75 %>%
+  select(1, 17:32)
+  
+combined_up
+survey_up
+survey_d75_up
+```
+#### Combining survey data frames first:
+We can use dplyr bind_rows() to combine data frames with differents number of columns, 
+but because both data frames have the same number of it, we can use simple rbind.
+```{r}
+combined_surveys <- rbind(survey_up, survey_d75_up)
+combined_up <- combined_up %>%
+  rename(dbn = `DBN`)
+```
+#### Joining combined survey data frame with combined_up data frame (demographic data):
+```{r}
+combined_final <- combined_up %>%
+  left_join(combined_surveys, by = "dbn")
+
+combined_final <- combined_final %>%
+  mutate(quality_metrics = (`saf_tot_11`+`com_tot_11`+`eng_tot_11`+`aca_tot_11`)/4)
+```
+#### Let's get an idea of which demographic and test score variables may be related to parent with a correlation matrix:
+```{r}
+cor_mat <- combined_final %>%
+  select_if(is.numeric) %>% 
+  cor(use = "pairwise.complete.obs")
+```
+#### Subsetting the correlation matrix:
+```{r}
+cor_tib <- cor_mat %>%
+  as_tibble(rownames = "variable")
+ 
+saf_tot_11_cors <- cor_tib %>%
+  filter((variable == "avg_sat_score") | (variable == "asian_per") | (variable == "white_per") | (variable == "black_per") | (variable == "hispanic_per") | (variable == "lat") | (variable == "long") | (variable == "dropout_percent")) %>%
+  select(variable, saf_tot_11) %>%
+  filter(saf_tot_11 > 0.15 | saf_tot_11 < -0.15)
+
+com_tot_11_cors <- cor_tib %>%
+  filter((variable == "avg_sat_score") | (variable == "asian_per") | (variable == "white_per") | (variable == "black_per") | (variable == "hispanic_per") | (variable == "lat") | (variable == "long") | (variable == "dropout_percent")) %>%
+  select(variable, com_tot_11) %>%
+  filter(com_tot_11 > 0.15 | com_tot_11 < -0.15)
+
+eng_tot_11_cors <- cor_tib %>%
+  filter((variable == "avg_sat_score") | (variable == "asian_per") | (variable == "white_per") | (variable == "black_per") | (variable == "hispanic_per") | (variable == "lat") | (variable == "long") | (variable == "dropout_percent")) %>%
+  select(variable, eng_tot_11) %>%
+  filter(eng_tot_11 > 0.15 | eng_tot_11 < -0.15)
+
+aca_tot_11_cors <- cor_tib %>%
+  filter((variable == "avg_sat_score") | (variable == "asian_per") | (variable == "white_per") | (variable == "black_per") | (variable == "hispanic_per") | (variable == "lat") | (variable == "long") | (variable == "dropout_percent")) %>%
+  select(variable, aca_tot_11) %>%
+  filter(aca_tot_11 > 0.15 | aca_tot_11 < -0.15)
+
+quality_metrics_cors <- cor_tib %>%
+  filter((variable == "avg_sat_score") | (variable == "asian_per") | (variable == "white_per") | (variable == "black_per") | (variable == "hispanic_per") | (variable == "lat") | (variable == "long") | (variable == "dropout_percent")) %>%
+  select(variable, quality_metrics) %>%
+  filter(quality_metrics > 0.15 | quality_metrics < -0.15)
+
+```
+#### Scatter plots with the variables filtered:
+
+A group for scatter plots for each survey variable: saf_tot_11, com_tot_11, eng_tot_11, aca_tot_11, quality_metrics (avg of saf, com, eng, aca).
+
+First: "Quality metrics vs Demographic Variables" - colour: Deepskyblue 
+```{r}
+create_scatter <- function(x,y) {
+  ggplot(data = combined_final) + 
+     aes_string(x = x, y = y) +  
+     geom_point(na.rm=TRUE, alpha = 0.3, colour="deepskyblue") + 
+     labs(title = "Quality metrics vs Demographic Variables") + 
+     theme(panel.background = element_rect(fill = "white"), plot.title = element_text(hjust = 0.5))
+}
+
+x_var <- names(combined_final)[33]
+y_var <- names(combined_final)[c(6,9:13)]
+
+map2(x_var, y_var, create_scatter)
+
+```
+
+
+Second: "Safety and Respect vs Demographic Variables" - colour: darkorange 
+
+```{r}
+create_scatter2 <- function(x,y) {
+  ggplot(data = combined_final) + 
+     aes_string(x = x, y = y) +  
+     geom_point(na.rm=TRUE, alpha = 0.3, colour="darkorange") + 
+     labs(title = "Safety and Respect vs Demographic Variables") + 
+     theme(panel.background = element_rect(fill = "white"), plot.title = element_text(hjust = 0.5))
+}
+
+x_var <- names(combined_final)[29]
+y_var <- names(combined_final)[c(6,9:13)]
+
+map2(x_var, y_var, create_scatter2)
+
+```
+Third: "Communication vs Demographic Variables" - colour: green2 
+
+```{r}
+create_scatter3 <- function(x,y) {
+  ggplot(data = combined_final) + 
+     aes_string(x = x, y = y) +  
+     geom_point(na.rm=TRUE, alpha = 0.3, colour="green2") + 
+     labs(title = "Communication vs Demographic Variables") + 
+     theme(panel.background = element_rect(fill = "white"), plot.title = element_text(hjust = 0.5))
+}
+
+x_var <- names(combined_final)[30]
+y_var <- names(combined_final)[c(6,9:13)]
+
+map2(x_var, y_var, create_scatter3)
+```
+Fourth: "Engagement vs Demographic Variables" - colour: blueviolet 
+
+```{r}
+create_scatter4 <- function(x,y) {
+  ggplot(data = combined_final) + 
+     aes_string(x = x, y = y) +  
+     geom_point(na.rm=TRUE, alpha = 0.3, colour="blueviolet") + 
+     labs(title = "Engagement vs Demographic Variables") + 
+     theme(panel.background = element_rect(fill = "white"), plot.title = element_text(hjust = 0.5))
+}
+
+x_var <- names(combined_final)[31]
+y_var <- names(combined_final)[c(6,9:13)]
+
+map2(x_var, y_var, create_scatter4)
+
+
+```
+Fourth: "Academic Expectations vs Demographic Variables" - colour: firebrick1 
+
+```{r}
+create_scatter5 <- function(x,y) {
+  ggplot(data = combined_final) + 
+     aes_string(x = x, y = y) +  
+     geom_point(na.rm=TRUE, alpha = 0.3, colour="firebrick1") + 
+     labs(title = "Academic Expectations vs Demographic Variables") + 
+     theme(panel.background = element_rect(fill = "white"), plot.title = element_text(hjust = 0.5))
+}
+
+x_var <- names(combined_final)[32]
+y_var <- names(combined_final)[c(6,9:13)]
+
+map2(x_var, y_var, create_scatter5)
+```
+#### It would be interesting to see whether parents, students, and teachers have similar perceptions about the four school quality metrics they were surveyed about: 
+
+    Safety and Respect
+    Communication
+    Engagement
+    Academic Expectations
+
+ We can group the data by question and survey response type (parent, student, teacher, or total) and then calculate a summary average for each group.
+
+```{r}
+combined_survey_gather <- combined_final %>%
+  gather(key = "survey_question", value = "score", 17:28,33) %>%
+  mutate(response_type = str_split(`survey_question`, "_", simplify = TRUE)[,2], metric = str_split(`survey_question`, "_", simplify = TRUE)[,1]) 
+  
+combined_survey_gather <- combined_survey_gather %>%
+  mutate(response_type = if_else(response_type == "p", "parent", if_else(response_type == "t", "teacher", if_else(response_type == "s", "student", "stp_combined"))))
+  
+```
+#### Now its time to group the data into categories: Students, Teachers and Parents. 
+
+#### 1. Summary perceptions: 
+```{r}
+perceptions <- combined_survey_gather %>%
+  group_by(response_type, metric) %>%
+  summarize(avg_score = mean(score, na.rm = TRUE))
+perceptions
+```
+```{r}
+combined_survey_gather <- combined_survey_gather %>%
+  drop_na(score)
+
+```
+
+```{r}
+combined_survey_gather %>%
+ # filter(response_type != "quality") %>%
+  ggplot() +
+  aes(x = survey_question, y = score, fill = response_type) +
+  geom_boxplot() + 
+  labs(title = "Perceptions of quality education in NYC High Schools") + 
+  theme(panel.background = element_rect(fill = "white"), plot.title = element_text(hjust = 0.5), axis.text.x=element_text(angle=90, hjust=1, size=8), panel.spacing.x=unit(0.5, "lines"))  
+
+```
+
+#### There are still interesting questions we can answer:
+
+- Is there a relationship between gender percentages and average SAT scores? How about for the different sections of the SAT (Reading, Writing, and Math)?
+
+- Which NYC schools seem to have the best quality metrics according to survey data? Is there a difference if we break this down by response type?
+
+- Can we learn anything from the differences in school quality metric perception between groups? For example, if we created a new variable by subtracting saf_p_11 from saf_p_11, can this difference in how students and parents perceive safety may be related to any other variables?
+
+
+
