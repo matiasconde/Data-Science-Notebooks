@@ -6,8 +6,11 @@
 library(readr)
 library(ggplot2)
 library(dplyr)
+library(purrr)
 
-forest_fires <- read_csv("/home/matiasconde/Documents/repos/Data-Science-Notebooks/ Analyzing Forest Fire Data/forestfires.csv")
+forest_fires <- read_csv("/home/matias/Documents/repos/Data-Science-Notebooks/Analyzing Forest Fire Data/forestfires.csv")
+
+View(forest_fires)
 
 forest_fires <- forest_fires %>%
   mutate(month = factor(month, levels = c("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")), 
@@ -27,13 +30,13 @@ fires_per_month <- forest_fires %>%
 
 ggplot(data = fires_per_day) + 
   aes(x = day, y = `Number of Forest-Fire`) + 
-  geom_bar(stat = "identity") + 
+  geom_bar(stat = "identity", colour="gold", fill="gold", alpha=0.3) + 
   theme(panel.background = element_rect(fill = "white"))	+ 
   labs(title = "Number of Forest Fire per Day")
 
 ggplot(data = fires_per_month) + 
   aes(x = month, y = `Number of Forest-Fire`) + 
-  geom_bar(stat = "identity") + 
+  geom_bar(stat = "identity", colour="gold", fill="gold", alpha=0.3) + 
   theme(panel.background = element_rect(fill = "white"))	+ 
   labs(title = "Number of Forest Fire per Month")
 
@@ -53,36 +56,35 @@ ggplot(data = fires_per_month) +
 
 vars <- c("FFMC","DMC","DC","ISI","temp","RH","wind","rain")
 
-variables_per_day <- function(x) {
-  ggplot(data = forest_fires) + 
-    aes(x = day, y = forest_fires[x]) + 
-    geom_boxplot() + 
-   # labs(title = "Variables per Day of the Week") + 
-    theme(panel.background = element_rect(fill = "white"))
-}
 
-
-create_box_plots <- function(x,y) {
+create_box_plots_day <- function(x,y) {
   ggplot(data = forest_fires) + 
     aes_string(x = x, y = y) + 
-    geom_boxplot() + 
+    geom_boxplot(colour="darkorange", fill="papayawhip") + 
     labs(title = "Variables per Day of the Week") + 
     theme(panel.background = element_rect(fill = "white"))
 }
 
+create_box_plots_month <- function(x,y) {
+  ggplot(data = forest_fires) + 
+    aes_string(x = x, y = y) + 
+    geom_boxplot(colour="firebrick2", fill="white") + 
+    labs(title = "Variables per Month") + 
+    theme(panel.background = element_rect(fill = "white"))
+}
 # BOX PLOTS PER DAY
 
-x_var = names(forest_fires)[4]
-y_var = names(forest_fires)[5:12]
+x_var_day = names(forest_fires)[4]
+y_var_day = names(forest_fires)[5:12]
 
-map2(x_var, y_var, create_box_plots)
+map2(x_var_day, y_var_day, create_box_plots_day)
 
-# BOX PLOTS PER WEEK
+# BOX PLOTS PER MONTH
 
-x_var = names(forest_fires)[3]
-y_var = names(forest_fires)[5:12]
+x_var_month = names(forest_fires)[3]
+y_var_month = names(forest_fires)[5:12]
 
-map2(x_var, y_var, create_box_plots)
+map2(x_var_month, y_var_month, create_box_plots_month)
 
 # the area variable contains data on the 
 # number of hectares of forest that burned during the forest fire. 
@@ -95,7 +97,7 @@ map2(x_var, y_var, create_box_plots)
 create_scatter <- function(x,y) {
   ggplot(data = forest_fires) + 
     aes_string(x = x, y = y) + 
-    geom_point(alpha = 0.3) + 
+    geom_point(alpha = 0.3,  colour="deepskyblue") + 
     labs(title = "Burned area vs other variables") + 
     theme(panel.background = element_rect(fill = "white"))
 }
@@ -118,12 +120,12 @@ ggplot(data = forest_fires) +
 # three categories: 0 value of area, 10-20 y 20 - 50
 
 area_not_null <- forest_fires %>%
-  filter(area > 0.1 & area <100)
+  filter(area > 1 & area <100)
 
 create_scatter2 <- function(x,y) {
   ggplot(data = area_not_null) + 
     aes_string(x = x, y = y) + 
-    geom_point(alpha = 0.3) + 
+    geom_point(alpha = 0.3, colour="deepskyblue") + 
     labs(title = "Burned area vs other variables") + 
     theme(panel.background = element_rect(fill = "white"))
 }
